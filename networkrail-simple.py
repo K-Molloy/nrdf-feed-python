@@ -9,7 +9,7 @@ import stomp
 from pymongo import MongoClient
 
 from logger import Logger
-from listener import Listener
+from listener.listener import Listener
 from installation.installation import Installation
 from installation.schedule import Schedule
 
@@ -24,7 +24,7 @@ def nrdf_feed():
     _config_location = r'config.json'
     with open(_config_location, 'r') as f:
         _config = json.load(f)   
-    logrep.info('Successfully loaded config file : /%s' % _config_location)
+    logrep.info('Successfully loaded config file : %s' % _config_location)
 
     # Create Mongo Connection
     mongodb = MongoClient(_config['mongo']['connection-string'])
@@ -32,15 +32,14 @@ def nrdf_feed():
     logrep.info('MongoDB Connection Established [%s:%s]' % (_config['mongo']['connection-string'],_config['mongo']['db-name']))
             
     # TODO: Installation logic goes here
-    if (_config['installation']['fresh']==True):
-        logrep.info('Fresh Installation = True | Starting Installation Procedure')
+    if (_config['installation']['full']==True):
+        logrep.info('Installation = True | Starting Installation Procedure')
         ins = Installation(db,logrep,_config)
-        #ins.importCORPUS()
-        #ins.importSMART()
-        #ins.importReference(None)
+        ins.importCORPUS()
+        ins.importSMART()
+        ins.importReference(_config['installation']['geography'])
         ins.importFullSchedule()
-    else:
-        logrep.info('Fresh Installation = False | Skipping')
+
         
         
     # Create Stomp Logic
@@ -50,7 +49,7 @@ def nrdf_feed():
                 heartbeats=(10000, 5000))
 
     # Create Listener Object
-    mq.set_listener('', Listener(mq,logrep))
+    mq.set_listener('', Listener(mq,logrep,db))
 
     # Connect
     mq.connect( username=_config['stomp-connection']['username'],
@@ -58,19 +57,47 @@ def nrdf_feed():
                 wait=True)
     logrep.info('Stomp Connection Established [%s:%i]' % (_config['stomp-connection']['host-url'], _config['stomp-connection']['host-port']))
 
-    # Subscribe to basic topic
-    mq.subscribe("/topic/TRAIN_MVT_ALL_TOC", 'test-mvt', ack='client-individual')
+    # Subscription to Topics
 
-    logrep.info('Stomp Topic Subscribed: %s','TRAIN_MVT_ALL_TOC')
+    if _config['processing']['td']:
+        # TD -> Train Describer
+        topic = '/topic/' + _config['subscriptions']['td-channel']
+        mq.subscribe(topic, 'TD', ack='client-individual')
+        logrep.info('Stomp Topic Subscribed: {}'.format(topic))
+
+    if _config['processing']['trust']:
+        # TRUST -> Train Movements
+        topic = '/topic/' + _config['subscriptions']['mvt-channel']
+        mq.subscribe(topic, 'TRUST', ack='client-individual')
+        logrep.info('Stomp Topic Subscribed: {}'.format(topic))
+
+    if _config['processing']['vstp']:
+        # VSTP -> Very Short Term Plan VSTP_ALL
+        topic = '/topic/VSTP_ALL'
+        mq.subscribe(topic, 'VSTP', ack='client-individual')
+        logrep.info('Stomp Topic Subscribed: {}'.format(topic))
+
+    if _config['processing']['rtppm']:
+        # RTPMM -> Real Time Performance Measure
+        topic = '/topic/RTPPM_ALL'
+        mq.subscribe(topic, 'RTPPM', ack='client-individual')
+        logrep.info('Stomp Topic Subscribed: {}'.format(topic))
+
+    if _config['processing']['tsr']:
+        # TSR -> Temporary Speed RestrictionsTSR_ALL_ROUTE
+        topic = '/topic/' + _config['subscriptions']['mvt-channel']
+        mq.subscribe(topic, 'TSR', ack='client-individual')
+        logrep.info('Stomp Topic Subscribed: {}'.format(topic))
 
     # Disconnect
-    #wait=input("Press Enter to continue...")
+    wait=input("Press Enter to continue...\n")
     mq.disconnect()
 
     logrep.info('Stomp Disconnected')
 
 
     #while mq.is_connected():
+    
     #    sleep(1)
 
 

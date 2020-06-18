@@ -1,6 +1,8 @@
 import json
 import gzip
 import os 
+import glob
+from pymongo import MongoClient, InsertOne
 
 
 class Schedule:
@@ -10,7 +12,8 @@ class Schedule:
         self.logg = logrep
         self.conf = _config
 
-    
+        data_folder = r"data/sch"
+        os.makedirs(os.path.dirname(data_folder), exist_ok=True)    
 
     def readAssociation(self):
         # File is invalid JSON so extra parsing is required
@@ -21,7 +24,7 @@ class Schedule:
         # Open .gz file
 
         self.logg.info('Starting Association Reading')
-        with gzip.open('data/toc-full.gz', "rt", encoding="cp1252") as f:
+        with gzip.open('data/toc-full.json.gz', "rt", encoding="cp1252") as f:
 
             # Iterate over lines
             for obj in f:
@@ -56,7 +59,7 @@ class Schedule:
 
         self.logg.info('Starting Tiploc Reading')
         # Open .gz file
-        with gzip.open('data/toc-full.gz', "rt", encoding="cp1252") as f:
+        with gzip.open('data/toc-full.json.gz', "rt", encoding="cp1252") as f:
 
             # Iterate over lines
             for obj in f:
@@ -94,9 +97,9 @@ class Schedule:
 
         self.logg.info('Starting Schedule Reading')
 
-        self.logg.info('Bulk Size : {0}'.format(self.conf['bulk-size']))
+        self.logg.info('Bulk Size : {0}'.format(self.conf['standard-bulk-size']))
         # Open .gz file
-        with gzip.open('data/toc-full.gz', "rt", encoding="cp1252") as f:
+        with gzip.open('data/toc-full.json.gz', "rt", encoding="cp1252") as f:
 
             # Iterate over lines
             for obj in f:
@@ -114,10 +117,10 @@ class Schedule:
                     bulkStore.append(currentObject.copy())
 
                 if (totalImportedDocuments %5000 == 0 and totalImportedDocuments != 0):
-                    self.logg.info('Schedule Progress | {:.0%}'.format(currentImportedDocuments/self.conf['bulk-size']))
+                    self.logg.info('Schedule Progress | {:.0%}'.format(currentImportedDocuments/self.conf['standard-bulk-size']))
 
                 # Requires extra condition
-                if (totalImportedDocuments % self.conf['bulk-size'] == 0 and totalImportedDocuments != 0):
+                if (totalImportedDocuments % self.conf['standard-bulk-size'] == 0 and totalImportedDocuments != 0):
 
                     self.logg.info('Bulk Limit | Writing to File | Total Bulks {}'.format(bulkCounter))
 
@@ -156,7 +159,7 @@ class Schedule:
             [Boolean]: [Completion Flag]
         """
         # JsonTimetableV1 is always in the first line 
-        with gzip.open('data/toc-full.gz', "rt", encoding="cp1252") as f:
+        with gzip.open('data/toc-full.json.gz', "rt", encoding="cp1252") as f:
 
             line = f.readline()
 
@@ -224,3 +227,70 @@ class Schedule:
             db_confirm = self.mongodb['tiploc2'].insert(bulkStore)
 
         return db_confirm
+
+
+    def importSchedule(self):
+        """Takes data/sch/schedule*.json and imports into MongoDB using Bulk Write Operations
+        """
+
+        # Initialise File Copy
+        unchangedFile = []
+        # Counter
+        fileNumber = 0
+        
+
+        # Define Schedule*.json Path
+        #path = self.conf['location'] + r"data/sch/schedule*"
+        path = r"/home/kieran/nrdf-project/nrdf-feed-python/data/sch/schedule*"
+
+        self.logg.info('Schedule file paths : {}'.format(path))
+
+        # Get all files & sort them
+        files=sorted(glob.glob(path))
+
+        self.logg.info('{} Files Found'.format(len(files)-1))
+
+        # Iterate over each file
+        for item in sorted(files):
+
+
+            # Open file (read only)
+            with open(item, 'r') as f:
+
+                self.logg.info('Starting File {}|{}'.format(fileNumber,len(files)-1))
+
+                # Load File into Memory
+                unchangedFile = json.load(f)      
+                # Initialise Operations List
+                operations = []        
+
+                # Iterate over each JSON Object
+                for entry in unchangedFile:
+
+                    # Determine 'Create' or 'Delete' Entry
+                    # Full does not contain any Delete entries
+                    # Update contains both Create and Delete 
+
+                    # Create Entry -> Add to DB
+                    if entry['JsonScheduleV1']['transaction_type'] == 'Create':
+                        # Delete 'transaction_type' entry
+                        del entry['JsonScheduleV1']['transaction_type']
+                        # Using InsertOne add copy of JSON Object/Dict to Operations List
+                        operations.append(
+                            InsertOne(entry['JsonScheduleV1'].copy())
+                        )
+
+                    # Delete Entry -> Find & Delete from DB
+                    elif entry['JsonScheduleV1']['transaction_type'] == 'Delete':
+                        # Need to configure deletion
+                        False
+                    
+                    # Bulk Operation Logic 
+                    if len(operations)==self.conf['bulk-operations-size']:
+                        self.mongodb['schedule'].bulk_write(operations,ordered=False)
+                        operations = []
+                        
+
+
+                # Iterate File Number
+                fileNumber += 1

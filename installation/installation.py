@@ -205,7 +205,7 @@ class Installation:
                 bulkStore.append(out_file.copy())
 
 
-                if ((sum(totalImportedDocuments) % self.inst['bulk-size']) == 0):
+                if ((sum(totalImportedDocuments) % self.inst['standard-bulk-size']) == 0):
                     
                     # InsertMany
                     db_confirm = self.mongodb['reference'].insert(bulkStore)
@@ -254,17 +254,36 @@ class Installation:
         
 
     def importFullSchedule(self):
+        """NRDF Import Schedule 
 
-        # 1. Read file into local .json format
-        # 2. Use local .json to populate MongoDB using bulk inserts
+            1. Check if file downlaoded
+            2. Read file into local .json format
+            3. Use local .json files to populate MongoDB using bulk inserts
+
+        """
+        self.logg.info('Starting SCHEDULE Import')
+
+        # Check if file already downloaded
+        if ~os.path.exists(r'data/toc-full.json.gz'):
+            request_url = 'https://datafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_FULL_DAILY&day=toc-full'
+            self.logg.info('Downloading File | {0}'.format(request_url))
+
+            r = requests.get(request_url,auth=(self.auth[0], self.auth[1]))
+
+            self.logg.info('SCHEDULE HTTP Request [%i] | File Downloaded' % r.status_code)
+            open(r'data/toc-full.json.gz', 'wb').write(r.content)
+        else:
+            self.logg.info('SCHEDULE File Detected, skipping download')
+
         sch = Schedule(self.mongodb, self.logg, self.inst)
 
         self.logg.info('Reading Schedule File')
-        state0 = sch.readTimetableVersion()
-        self.logg.info('Completed version.json')
-        state1 = sch.readAssociation()
-        self.logg.info('Completed association.json')
-        state2 = sch.readTiploc()
-        self.logg.info('Completed tiploc.json')
-        state3 = sch.readSchedule()
-        self.logg.info('Completed schedule.json')
+        sch.readTimetableVersion()
+        sch.readAssociation()
+        sch.readTiploc()
+        sch.readSchedule()
+        self.logg.info('Completed Writing Files to /data \n Starting Importing to MongoDB')
+        sch.importSchedule()
+        sch.importTiploc()
+        sch.importAssociation()
+        self.logg.info('Completed MongoDB Import')
