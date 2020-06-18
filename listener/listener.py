@@ -63,14 +63,14 @@ class Listener:
         
     def on_message(self, headers, message):
 
-        self.logg.debug('Message Recieved')
+        self.printCounters()
 
 
         # Determine Sending System & Call Correct Function 
-        try:
-            self.determineSenderSystem(headers,message)
-        except:
-            self.logg.error('Problem Importing Message')
+        #try:
+        self.determineSenderSystem(headers,message)
+        #except Exception as e: 
+            #self.logg.error('Problem Importing Message : {}'.format(e))
 
         # TEMP : Save Messages to File
         #with open(self.output_path, 'w') as outfile:
@@ -78,8 +78,6 @@ class Listener:
             
         self._mq.ack(id=headers['message-id'], subscription=headers['subscription'])
 
-        if sum(self.message_counters)==25:
-            self.printCounters()
 
 
     def on_error(self,headers,message):
@@ -107,6 +105,7 @@ class Listener:
         if headers['subscription']=="TRUST":
             # Increment Message Counters
             self.message_counters[0] += 1
+            self.printTRUST()
             self.trustParser.on_message(message)
 
         elif headers['subscription']=="TD":
@@ -135,7 +134,17 @@ class Listener:
             return "Unknown"
 
     def printCounters(self):
-        self.logg.info("Messages Recieved : {0} \n{1}".format(sum(self.message_counters),self.message_counters))
+        self.logg.info("Messages Recieved : {0} | {1}".format(sum(self.message_counters),self.message_counters))
+        None
+
+    def printTRUST(self):
+        #self.logg.info("Messages Recieved : {0} \n{1}".format(sum(self.trustParser.getCounters),self.trustParser.getCounters))
+        None
+
+    def printTD(self):
+        self.logg.info('Not Yet Implemented  :)')
+        #self.logg.info("Messages Recieved : {0} \n{1}".format(sum(self.tdParser.getCounters),self.tdParser.getCounters))
+        
 
 
 

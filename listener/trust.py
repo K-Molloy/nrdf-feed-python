@@ -104,20 +104,22 @@ class TRUST:
         # Find all schedules that conform with activation
         query_res = self.db['schedule'].find(query)
 
+        try:
+            associated_schedule = query_res[0]['_id']
+        except:
+            associated_schedule = 'UNKNOWN'
+
         # Setup DB Insertion
         activated_train = {
             "train_uid" : message['body']['train_uid'],
             "trust_id" : message['body']['train_id'],
-            "schedule_id" : query_res[0]['_id'],
-            "operator_id" : message['body']['toc_id'],
+            "schedule_id" : associated_schedule,
+            "train_service_code" : message['body']['train_service_code'],
             "state" : "activated",
             "activation" : db_confirm.inserted_id,
-            "movements" : []
         }
 
         db_confirm = self.db['trains'].insert_one(activated_train)
-
-
 
 
 
@@ -130,12 +132,12 @@ class TRUST:
 
         # Find train with trust_id equivalent
         query = {
-            "trust_id": message['body']['train_id'],
-            "operator" : message['body']['toc_id']
+            "trust_id": message['body']['train_id']
         }
 
         newState = {
-            "$set": { "state": "cancelled" }, "$push" : { "movements" : db_confirm.inserted_id} 
+            "$set": { "state": "cancelled" },
+            "$push" : { "movements" : db_confirm.inserted_id} 
         }
 
         # Find schedule that conform with activation and update
@@ -151,12 +153,12 @@ class TRUST:
 
         # Find train with trust_id equivalent
         query = {
-            "trust_id": message['body']['train_id'],
-            "operator" : message['body']['toc_id']
+            "trust_id": message['body']['train_id']
         }
 
         newState = {
-            "$set": { "state": "moving" }, "$push" : { "movements" : db_confirm.inserted_id} 
+            "$set": { "state": "moving" },
+            "$push" : { "movements" : db_confirm.inserted_id} 
         }
 
         # Find schedule that conform with activation and update
@@ -171,12 +173,12 @@ class TRUST:
 
         # Find train with trust_id equivalent
         query = {
-            "trust_id": message['body']['train_id'],
-            "operator" : message['body']['toc_id']
+            "trust_id": message['body']['train_id']
         }
 
         newState = {
-            "$set": { "state": "reinstated" }, "$push" : { "changes" : db_confirm.inserted_id} 
+            "$set": { "state": "reinstated" }, 
+            "$push" : { "changes" : db_confirm.inserted_id} 
         }
 
         # Find schedule that conform with activation and update
@@ -191,12 +193,12 @@ class TRUST:
 
         # Find train with trust_id equivalent
         query = {
-            "trust_id": message['body']['train_id'],
-            "operator" : message['body']['toc_id']
+            "trust_id": message['body']['train_id']
         }
 
         newState = {
-            "$set": { "state": "coo" }, "$push" : { "changes" : db_confirm.inserted_id} 
+            "$set": { "state": "coo" }, 
+            "$push" : { "changes" : db_confirm.inserted_id} 
         }
 
         # Find schedule that conform with activation and update
@@ -207,16 +209,16 @@ class TRUST:
         # 0007 - Change of Identity
 
         # Insert into trust movements DB
-        db_confirm = self.db['trust_coi'].insert_one(message['body'])
+        db_confirm = self.db['trust_other'].insert_one(message['body'])
 
         # Find train with trust_id equivalent
         query = {
-            "trust_id": message['body']['train_id'],
-            "operator" : message['body']['toc_id']
+            "trust_id": message['body']['train_id']
         }
 
         newState = {
-            "$set": { "state": "coi" }, "$push" : { "changes" : db_confirm.inserted_id} 
+            "$set": { "state": "coi" }, 
+            "$push" : { "changes" : db_confirm.inserted_id} 
         }
 
         # Find schedule that conform with activation and update
@@ -231,12 +233,12 @@ class TRUST:
 
         # Find train with trust_id equivalent
         query = {
-            "trust_id": message['body']['train_id'],
-            "operator" : message['body']['toc_id']
+            "trust_id": message['body']['train_id']
         }
 
         newState = {
-            "$set": { "state": "col" }, "$push" : { "changes" : db_confirm.inserted_id} 
+            "$set": { "state": "col" }, 
+            "$push" : { "changes" : db_confirm.inserted_id} 
         }
 
         # Find schedule that conform with activation and update

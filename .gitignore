@@ -137,6 +137,17 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# VS Code
+/.vscode
+###################
+# CUSTOM COMMANDS #
+###################
 
 # config.json
 config.json
+
+# Everything in data
+/data
+
+# testing
+test.ipynb

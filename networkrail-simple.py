@@ -26,12 +26,16 @@ def nrdf_feed():
         _config = json.load(f)   
     logrep.info('Successfully loaded config file : %s' % _config_location)
 
+    # Network Rail Rules state security token must be present
+    logrep.info('Process Name : {}'.format(_config['process-id']))
+    logrep.info('Network Rail Security Token : {}'.format(_config['security-token']))
+
     # Create Mongo Connection
     mongodb = MongoClient(_config['mongo']['connection-string'])
     db = mongodb[_config['mongo']['db-name']]
     logrep.info('MongoDB Connection Established [%s:%s]' % (_config['mongo']['connection-string'],_config['mongo']['db-name']))
             
-    # TODO: Installation logic goes here
+    # Full Installation Process - Potentially needs some tweaking
     if (_config['installation']['full']==True):
         logrep.info('Installation = True | Starting Installation Procedure')
         ins = Installation(db,logrep,_config)
@@ -40,6 +44,7 @@ def nrdf_feed():
         ins.importReference(_config['installation']['geography'])
         ins.importFullSchedule()
 
+    # TODO : Update Schedule Installation Process
         
         
     # Create Stomp Logic
@@ -90,7 +95,7 @@ def nrdf_feed():
         logrep.info('Stomp Topic Subscribed: {}'.format(topic))
 
     # Disconnect
-    wait=input("Press Enter to continue...\n")
+    wait = input("Press Enter to continue...\n")
     mq.disconnect()
 
     logrep.info('Stomp Disconnected')
@@ -99,8 +104,6 @@ def nrdf_feed():
     #while mq.is_connected():
     
     #    sleep(1)
-
-
 
 
 # Main 
