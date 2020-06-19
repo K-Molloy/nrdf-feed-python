@@ -118,17 +118,19 @@ class TRUST:
             associated_schedule = 'UNKNOWN'
             self.logg.error('ACT FAIL TRUST {} | SCHED UNKNWN '.format(message['body']['train_id']))
 
-        # Setup DB Insertion
-        activated_train = {
-            "train_uid" : message['body']['train_uid'],
-            "trust_id" : message['body']['train_id'],
-            "schedule_id" : associated_schedule,
-            "train_service_code" : message['body']['train_service_code'],
-            "state" : "activated",
-            "activation" : db_confirm.inserted_id,
-        }
+        else:
 
-        db_confirm = self.db['trains'].insert_one(activated_train)
+            # Setup DB Insertion
+            activated_train = {
+                "train_uid" : message['body']['train_uid'],
+                "trust_id" : message['body']['train_id'],
+                "schedule_id" : associated_schedule,
+                "train_service_code" : message['body']['train_service_code'],
+                "state" : "activated",
+                "activation" : db_confirm.inserted_id,
+            }
+
+            db_confirm = self.db['trains'].insert_one(activated_train)
 
 
 
