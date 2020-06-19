@@ -4,9 +4,12 @@
 
 class TD:
 
-    def __init__(self,db):
+    def __init__(self,db, logg):
         # Save DB locally
         self.db = db
+
+        # Save Logger Locally
+        self.logg = logg
 
 
     def on_message(self, message):

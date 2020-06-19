@@ -34,10 +34,14 @@ import json
 
 class TRUST:
 
-    def __init__(self,db):
+    def __init__(self,db,logg):
         # Save DB locally
         self.db = db
 
+        # Save Logging Object
+        self.logg = logg
+
+        # Initialise Message Counters
         self.type_counters = [0,0,0,0,0,0,0,0]
 
     def getCounters(self):
@@ -47,7 +51,10 @@ class TRUST:
 
     def on_message(self, message_txt):
 
-        message_json = json.loads(message_txt)
+        try:
+            message_json = json.loads(message_txt)
+        except:
+            self.logg.error('Invalid JSON File')
 
         # Each 'message' can have multiple trains
         for item in message_json:
@@ -102,12 +109,14 @@ class TRUST:
         }
 
         # Find all schedules that conform with activation
-        query_res = self.db['schedule'].find(query)
+        query_res = self.db['schedule'].find_one(query)
 
         try:
-            associated_schedule = query_res[0]['_id']
-        except:
+            associated_schedule = query_res['_id']
+            self.logg.debug('ACT PASS TRUST {} | SCHED {}'.format(message['body']['train_id'], associated_schedule))
+        except TypeError as e:
             associated_schedule = 'UNKNOWN'
+            self.logg.error('ACT FAIL TRUST {} | SCHED UNKNWN '.format(message['body']['train_id']))
 
         # Setup DB Insertion
         activated_train = {
@@ -135,13 +144,35 @@ class TRUST:
             "trust_id": message['body']['train_id']
         }
 
-        newState = {
-            "$set": { "state": "cancelled" },
-            "$push" : { "movements" : db_confirm.inserted_id} 
-        }
+        # Locate Train Record
+        query_res = self.db['trains'].find_one(query)
 
-        # Find schedule that conform with activation and update
-        db_confirm = self.db['trains'].update_one(query, newState, upsert=True)
+        # Find Train in db['train'] and update information, if not there create it
+        try:
+            # Get query ObjectID of Train records
+            associatedTrain = query_res['_id']
+            self.logg.debug('CAN PASS TRUST {} | TRAIN {} '.format(message['body']['train_id'], associatedTrain))
+
+        except TypeError:
+            self.logg.error('CAN FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
+            # Create Train with suboptimal information
+            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+
+        else:
+
+            # Save ObjectID and create new query
+            updateQuery = {
+                "_id" : associatedTrain
+            }
+
+            # New State 
+            newState = {
+                "$set": { "state": "cancelled" },
+                "$push" : { "movements" : db_confirm.inserted_id} 
+            }
+
+            # Find schedule that conform with activation and update
+            db_confirm = self.db['trains'].update_one(updateQuery, newState)
 
 
     def trainMovement(self,message):
@@ -156,13 +187,42 @@ class TRUST:
             "trust_id": message['body']['train_id']
         }
 
-        newState = {
-            "$set": { "state": "moving" },
-            "$push" : { "movements" : db_confirm.inserted_id} 
-        }
+        # Locate Train Record
+        query_res = self.db['trains'].find_one(query)
 
-        # Find schedule that conform with activation and update
-        db_confirm = self.db['trains'].update_one(query, newState, upsert=True)
+        
+        # Find Train in db['train'] and update information, if not there create it
+        try:
+            # Get query ObjectID of Train records
+            associatedTrain = query_res['_id']
+            self.logg.debug('MOV PASS TRUST {} | TRAIN {}'.format(message['body']['train_id'], associatedTrain))
+
+        except TypeError:
+            self.logg.error('MOV FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
+            # Create Train with suboptimal information
+            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+
+        else:
+            
+            # Save ObjectID and create new query
+            updateQuery = {
+                "_id" : associatedTrain
+            }
+
+            if message['body']['train_terminated']:
+                state = 'moving'
+            else:
+                state = 'terminated'
+
+            # New State is constant
+            newState = {
+                "$set": { "state": state },
+                "$push" : { "movements" : db_confirm.inserted_id} 
+            }
+
+            # Find schedule that conform with activation and update
+            db_confirm = self.db['trains'].update_one(updateQuery, newState)
+
 
     def trainReinstatement(self,message):
         # Handler Function for 
@@ -176,13 +236,34 @@ class TRUST:
             "trust_id": message['body']['train_id']
         }
 
-        newState = {
-            "$set": { "state": "reinstated" }, 
-            "$push" : { "changes" : db_confirm.inserted_id} 
-        }
+        # Locate Train Record
+        query_res = self.db['trains'].find_one(query)
 
-        # Find schedule that conform with activation and update
-        db_confirm = self.db['trains'].update_one(query, newState, upsert=True)
+        try:
+            # Get query ObjectID of Train records
+            associatedTrain = query_res['_id']
+            self.logg.debug('REI PASS TRUST {} | TRAIN {} '.format(message['body']['train_id'], associatedTrain))
+
+        except TypeError:
+            self.logg.error('REI FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
+            # Create Train with suboptimal information
+            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+
+        else:
+
+            # Save ObjectID and create new query
+            updateQuery = {
+                "_id" : associatedTrain
+            }
+
+            # New State 
+            newState = {
+                "$set": { "state": "reinstated" },
+                "$push" : { "movements" : db_confirm.inserted_id} 
+            }
+
+            # Find schedule that conform with activation and update
+            db_confirm = self.db['trains'].update_one(updateQuery, newState)
         
     def trainCOO(self,message):
         # Handler Function for 
@@ -196,13 +277,35 @@ class TRUST:
             "trust_id": message['body']['train_id']
         }
 
-        newState = {
-            "$set": { "state": "coo" }, 
-            "$push" : { "changes" : db_confirm.inserted_id} 
-        }
+        # Locate Train Record
+        query_res = self.db['trains'].find_one(query)
 
-        # Find schedule that conform with activation and update
-        db_confirm = self.db['trains'].update_one(query, newState, upsert=True)
+        # Find Train in db['train'] and update information, if not there create it
+        try:
+            # Get query ObjectID of Train records
+            associatedTrain = query_res['_id']
+            self.logg.debug('COO PASS TRUST {} | TRAIN {}'.format(message['body']['train_id'], associatedTrain))
+
+        except TypeError:
+            self.logg.error('COO FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
+            # Create Train with suboptimal information
+            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+
+        else:
+            
+            # Save ObjectID and create new query
+            updateQuery = {
+                "_id" : associatedTrain
+            }
+
+            # New State is constant
+            newState = {
+                "$set": { "state": "coo" },
+                "$push" : { "movements" : db_confirm.inserted_id} 
+            }
+
+            # Find schedule that conform with activation and update
+            db_confirm = self.db['trains'].update_one(updateQuery, newState)
 
     def trainCOI(self,message):
         # Handler Function for 
@@ -216,13 +319,34 @@ class TRUST:
             "trust_id": message['body']['train_id']
         }
 
-        newState = {
-            "$set": { "state": "coi" }, 
-            "$push" : { "changes" : db_confirm.inserted_id} 
-        }
+        # Locate Train Record
+        query_res = self.db['trains'].find_one(query)
 
-        # Find schedule that conform with activation and update
-        db_confirm = self.db['trains'].update_one(query, newState, upsert=True)
+        try:
+            # Get query ObjectID of Train records
+            associatedTrain = query_res['_id']
+            self.logg.debug('COI PASS TRUST {} | TRAIN {} '.format(message['body']['train_id'], associatedTrain))
+
+        except TypeError:
+            self.logg.error('COI FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
+            # Create Train with suboptimal information
+            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+
+        else:
+
+            # Save ObjectID and create new query
+            updateQuery = {
+                "_id" : associatedTrain
+            }
+
+            # New State 
+            newState = {
+                "$set": { "state": "coi" },
+                "$push" : { "movements" : db_confirm.inserted_id} 
+            }
+
+            # Find schedule that conform with activation and update
+            db_confirm = self.db['trains'].update_one(updateQuery, newState)
 
     def trainCOL(self,message):
         # Handler Function for 
@@ -236,10 +360,48 @@ class TRUST:
             "trust_id": message['body']['train_id']
         }
 
-        newState = {
-            "$set": { "state": "col" }, 
-            "$push" : { "changes" : db_confirm.inserted_id} 
-        }
+        # Locate Train Record
+        query_res = self.db['trains'].find_one(query)
 
-        # Find schedule that conform with activation and update
-        db_confirm = self.db['trains'].update_one(query, newState, upsert=True)
+        try:
+            # Get query ObjectID of Train records
+            associatedTrain = query_res['_id']
+            self.logg.debug('COL PASS TRUST {} | TRAIN {} '.format(message['body']['train_id'], associatedTrain))
+
+        except TypeError:
+            self.logg.error('COL FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
+            # Create Train with suboptimal information
+            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+
+        else:
+
+            # Save ObjectID and create new query
+            updateQuery = {
+                "_id" : associatedTrain
+            }
+
+            # New State 
+            newState = {
+                "$set": { "state": "col" },
+                "$push" : { "movements" : db_confirm.inserted_id} 
+            }
+
+            # Find schedule that conform with activation and update
+            db_confirm = self.db['trains'].update_one(updateQuery, newState)
+
+
+    def createUnactivatedTrain(self, movement, message):
+
+        # Setup DB Insertion
+            activated_train = {
+                "train_uid" : "UNKNOWN",
+                "trust_id" : message['body']['train_id'],
+                "train_service_code" : message['body']['train_service_code'],
+                "state" : "UNKNOWN",
+                "activation" : "UNKNOWN",
+                "movements" : [movement]
+            }
+
+            db_confirm = self.db['trains'].insert_one(activated_train)
+
+            return db_confirm.inserted_id
