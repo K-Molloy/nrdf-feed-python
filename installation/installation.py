@@ -6,6 +6,9 @@ import re
 import pandas as pd
 from installation.schedule import Schedule
 
+from pymongo import InsertOne
+from pymongo.errors import BulkWriteError
+
 class Installation:
     
     def __init__(self,db,logrep,_config):
@@ -41,12 +44,23 @@ class Installation:
             data = json.load(f)
             
         self.logg.info('Importing SMART into MongoDB')
+
+        operations = []
         for entry in data['BERTHDATA']:
-            db_confirm = self.mongodb['smart'].insert_one(entry) 
+
+            operations.append(
+                            InsertOne(entry.copy())
+                        )
             totalImportedDocuments += 1
-            if ((totalImportedDocuments%5000) == 0):
-                self.logg.info('SMART Progress | {:.0%}'.format(totalImportedDocuments/4e4))  
-        self.logg.info('Completed SMART Import Successfully')  
+
+        self.logg.info('Uploading SMART to MongoDB')
+        try: 
+
+            self.mongodb['smart'].bulk_write(operations)
+
+            self.logg.info('Completed SMART Import Successfully')
+        except BulkWriteError as bwe:
+            self.logg.error(bwe.details)
 
     def importReference(self,filename):
     
@@ -77,7 +91,7 @@ class Installation:
             
             self.logg.info('Importing Reference into MongoDB')
 
-            bulkStore = []
+            operations = []
 
             for row in df.itertuples(index=False):
                 # Reset out_file
@@ -205,19 +219,25 @@ class Installation:
                     totalImportedDocuments[7] += 1
                     
                 # Append Copy of Dictionary to List
-                bulkStore.append(out_file.copy())
-
+                operations.append(
+                            InsertOne(out_file.copy())
+                        )
 
                 if ((sum(totalImportedDocuments) % self.inst['standard-bulk-size']) == 0):
-                    
-                    # InsertMany
-                    db_confirm = self.mongodb['reference'].insert(bulkStore)
-                    # Reset Bulk Storage
-                    bulkStore = []
-                    # Increment Counter
-                    bulkCounter +=1
+                    try:
+                        
+                        self.mongodb['reference'].bulk_write(operations)
 
-                    self.logg.info('REFERENCE Progress | {:.0%} '.format(sum(totalImportedDocuments)/1.2e6))  
+                    except BulkWriteError as bwe:
+                        self.logg.error(bwe.details)
+                    else:
+                        # Reset Bulk Storage
+                        operations = []
+                        # Increment Counter
+                        bulkCounter +=1
+
+                        self.logg.info('REFERENCE Progress | {:.0%} | {} Inserts'.format(sum(totalImportedDocuments)/1.2e6, bulkCounter))  
+                    
 
         self.logg.info('Completed Reference Import Successfully')          
 
@@ -246,13 +266,22 @@ class Installation:
         with gzip.open(r'data/corpus.json.gz', "rt", encoding="utf-8") as f:
             data = json.load(f)
             
+        operations = []
         self.logg.info('Importing CORPUS into MongoDB')
         for entry in data['TIPLOCDATA']:
-            db_confirm = self.mongodb['tiploc'].insert_one(entry) 
+            operations.append(
+                            InsertOne(entry.copy())
+                        )
             totalImportedDocuments += 1
-            if ((totalImportedDocuments%5000) == 0):
-                self.logg.info('CORPUS Progress | {:.0%}'.format(totalImportedDocuments/6e4))  
-        self.logg.info('Completed CORPUS Import Successfully')  
+        self.logg.info('Uploading CORPUS to MongoDB')
+        try:
+            
+            self.mongodb['tiploc'].bulk_write(operations)
+
+            self.logg.info('Completed CORPUS Import Successfully')
+        except BulkWriteError as bwe:
+            self.logg.error(bwe.details)
+              
         
         
 

@@ -3,6 +3,7 @@ import gzip
 import os 
 import glob
 from pymongo import MongoClient, InsertOne
+from pymongo.errors import BulkWriteError
 
 
 class Schedule:
@@ -177,7 +178,7 @@ class Schedule:
 
         # Initialise Empty Lists 
         unchangedFile = []
-        bulkStore = []
+        operations = []
 
         # Open File
         with open('data/sch/association.json') as f:
@@ -188,15 +189,23 @@ class Schedule:
             for entry in unchangedFile[0]:
                 if entry['JsonAssociationV1']['transaction_type'] == 'Create':
                     del entry['JsonAssociationV1']['transaction_type']
-                    bulkStore.append(entry['JsonAssociationV1'])
+                    operations.append(
+                        InsertOne(entry['JsonAssociationV1'].copy())
+                    )
                 elif entry['JsonAssociationV1']['transaction_type'] == 'Delete':
                     # Need to configure Deleting stuff
                     False
 
 
-            db_confirm = self.mongodb['association'].insert(bulkStore)
+            self.logg.info('Uploading ASSOCIATION to MongoDB')
+            try: 
 
-        return db_confirm
+                self.mongodb['association'].bulk_write(operations)
+
+                self.logg.info('Completed ASSOCIATION Import Successfully')
+            except BulkWriteError as bwe:
+                self.logg.error(bwe.details)
+
 
 
     def importTiploc(self):
@@ -207,7 +216,7 @@ class Schedule:
 
         # Initialise Empty Lists 
         unchangedFile = []
-        bulkStore = []
+        operations = []
 
         # Open File
         with open('data/sch/tiploc.json') as f:
@@ -218,15 +227,22 @@ class Schedule:
             for entry in unchangedFile[0]:
                 if entry['TiplocV1']['transaction_type'] == 'Create':
                     del entry['TiplocV1']['transaction_type']
-                    bulkStore.append(entry['TiplocV1'])
+                    operations.append(
+                        InsertOne(entry['TiplocV1'].copy())
+                    )
                 elif entry['TiplocV1']['transaction_type'] == 'Delete':
                     # Need to configure Deleting stuff
                     False
 
 
-            db_confirm = self.mongodb['tiploc2'].insert(bulkStore)
+            self.logg.info('Uploading TIPLOC2 to MongoDB')
+            try: 
 
-        return db_confirm
+                self.mongodb['tiploc2'].bulk_write(operations)
+
+                self.logg.info('Completed TIPLOC2 Import Successfully')
+            except BulkWriteError as bwe:
+                self.logg.error(bwe.details)
 
 
     def importSchedule(self):
