@@ -241,7 +241,7 @@ class Schedule:
 
         # Define Schedule*.json Path
         #path = self.conf['location'] + r"data/sch/schedule*"
-        path = r"/home/kieran/nrdf-project/nrdf-feed-python/data/sch/schedule*"
+        path = r"/home/ubuntu/nrdf-feed/data/sch/schedule*"
 
         self.logg.info('Schedule file paths : {}'.format(path))
 

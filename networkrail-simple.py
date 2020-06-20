@@ -31,7 +31,12 @@ def nrdf_feed():
     logrep.info('Network Rail Security Token : {}'.format(_config['security-token']))
 
     # Create Mongo Connection
-    mongodb = MongoClient(_config['mongo']['connection-string'])
+    mongodb = MongoClient(_config['mongo']['connection-string'],
+                        username=_config['mongo']['username'],
+                        password=_config['mongo']['password'],
+                        authSource='connections',
+                        authMechanism='SCRAM-SHA-256')
+
     db = mongodb[_config['mongo']['db-name']]
     logrep.info('MongoDB Connection Established [%s:%s]' % (_config['mongo']['connection-string'],_config['mongo']['db-name']))
             
@@ -39,9 +44,10 @@ def nrdf_feed():
     if (_config['installation']['full']==True):
         logrep.info('Installation = True | Starting Installation Procedure')
         ins = Installation(db,logrep,_config)
-        ins.importCORPUS()
-        ins.importSMART()
+        #ins.importCORPUS()
+        #ins.importSMART()
         ins.importReference(_config['installation']['geography'])
+        ins.downloadFullSchedule()
         ins.importFullSchedule()
 
     # TODO : Update Schedule Installation Process

@@ -14,6 +14,9 @@ class Installation:
         self.inst = _config['installation']
         self.auth = (_config['stomp-connection']['username'],_config['stomp-connection']['password'])
 
+        self.sch = Schedule(self.mongodb, self.logg, self.inst)
+
+
         data_folder = r"data/sch"
         os.makedirs(os.path.dirname(data_folder), exist_ok=True)
         
@@ -253,7 +256,7 @@ class Installation:
         
         
 
-    def importFullSchedule(self):
+    def downloadFullSchedule(self):
         """NRDF Import Schedule 
 
             1. Check if file downlaoded
@@ -275,15 +278,18 @@ class Installation:
         else:
             self.logg.info('SCHEDULE File Detected, skipping download')
 
-        sch = Schedule(self.mongodb, self.logg, self.inst)
-
+        
         self.logg.info('Reading Schedule File')
-        sch.readTimetableVersion()
-        sch.readAssociation()
-        sch.readTiploc()
-        sch.readSchedule()
-        self.logg.info('Completed Writing Files to /data \n Starting Importing to MongoDB')
-        sch.importSchedule()
-        sch.importTiploc()
-        sch.importAssociation()
+        self.sch.readTimetableVersion()
+        self.sch.readAssociation()
+        self.sch.readTiploc()
+        self.sch.readSchedule()
+        self.logg.info('Completed Writing Schedule to file')
+        
+
+    def importFullSchedule(self):
+        self.logg.info('Starting Importing to MongoDB')
+        self.sch.importSchedule()
+        self.sch.importTiploc()
+        self.sch.importAssociation()
         self.logg.info('Completed MongoDB Import')
