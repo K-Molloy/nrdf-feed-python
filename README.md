@@ -1,10 +1,12 @@
 # NRDF Feed (Python)
 
+[![Build Status](https://travis-ci.com/K-Molloy/nrdf-feed-python.svg?branch=master)](https://travis-ci.com/K-Molloy/nrdf-feed-python)
+
 NRDF (Network Rail Data Feeds) Feed is the [STOMP][stomp] powered listener system for [Kieran Molloy's][personal-website] 3rd year university dissertation.
 
-The system was previously created in JavaScript using [node.js] and can be found [here][old-github-repo].
+The system was previously created in JavaScript using [node.js][node.js] and can be found [here][old-github-repo].
 Currently the plan is to transition over to python for better performance, in addition to the far fewer dependencies and easier updatability this decision is for the long run.
-When TRUST and TD is implemented the website will be recreated, spliting the current (very naively created) API which is integrated directly into the webserver's (again using [node.js] with [express]) viewmodel API.
+When TRUST and TD is implemented the website will be recreated, spliting the current (very naively created) API which is integrated directly into the webserver's (again using [node][node.js] with [express][express]) viewmodel API.
 
 # Road Map
 
@@ -13,15 +15,15 @@ When TRUST and TD is implemented the website will be recreated, spliting the cur
   - [x] Reference Integration - 
   - [x] Full Schedule Integration - 
   - [x] Update Schedule Integration - 
-  - [-] TRUST Tracking - All Movements integrated into a single record
-  - [-] TRUST API - Similar to the train models from the [previous website][site-github-repo]
-  - [-] TD Tracking - All Berth Movements saved in a 'berth-map' datatype
-  - [-] TD API - Request single berth's current occupany / history in addition to regions
-  - [-] Fancy Website - TBC, but an easy way to access the API focusing on usability
-  - [-] VSTP Integration - TBC
-  - [-] RTPPM Integration - TBC
-  - [-] TSR Integration -TBC
-  - [-] New CIF Parser - TBC
+  - [] TRUST Tracking - All Movements integrated into a single record
+  - [] TRUST API - Similar to the train models from the [previous website][site-github-repo]
+  - [] TD Tracking - All Berth Movements saved in a 'berth-map' datatype
+  - [] TD API - Request single berth's current occupany / history in addition to regions
+  - [] Fancy Website - TBC, but an easy way to access the API focusing on usability
+  - [] VSTP Integration - TBC
+  - [] RTPPM Integration - TBC
+  - [] TSR Integration -TBC
+  - [] New CIF Parser - TBC
 
 ### Installation
 
