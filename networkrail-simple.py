@@ -44,8 +44,8 @@ def nrdf_feed():
     if (_config['installation']['full']==True):
         logrep.info('Installation = True | Starting Installation Procedure')
         ins = Installation(db,logrep,_config)
-        #ins.importCORPUS()
-        #ins.importSMART()
+        ins.importCORPUS()
+        ins.importSMART()
         ins.importReference(_config['installation']['geography'])
         ins.downloadFullSchedule()
         ins.importFullSchedule()
