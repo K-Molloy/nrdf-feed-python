@@ -96,8 +96,8 @@ class Listener:
         sleep((2 ** self.timeout) + (random.randint(0, 1000) / 1000))
 
         # Maximum Backoff Time = 32 seconds
-        if timeout < 32:
-            timeout = timeout*2
+        if self.timeout < 32:
+            self.timeout = self.timeout*2
 
         self.connectAndSubscribe(self.confStomp, self.confProcessing, self.confSubscriptions)
 

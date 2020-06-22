@@ -158,7 +158,7 @@ class TRUST:
         except TypeError:
             self.logg.error('CAN FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
             # Create Train with suboptimal information
-            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+            associatedTrain = self.createUnactivatedTrain(activation='can', movement=db_confirm.inserted_id, message=message)
 
         else:
 
@@ -202,7 +202,7 @@ class TRUST:
         except TypeError:
             self.logg.error('MOV FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
             # Create Train with suboptimal information
-            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+            associatedTrain = self.createUnactivatedTrain(activation='mov', movement=db_confirm.inserted_id, message=message)
 
         else:
             
@@ -211,7 +211,7 @@ class TRUST:
                 "_id" : associatedTrain
             }
 
-            if message['body']['train_terminated']:
+            if message['body']['train_terminated']=="false":
                 state = 'moving'
             else:
                 state = 'terminated'
@@ -249,7 +249,7 @@ class TRUST:
         except TypeError:
             self.logg.error('REI FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
             # Create Train with suboptimal information
-            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+            associatedTrain = self.createUnactivatedTrain(activation='rei', movement=db_confirm.inserted_id, message=message)
 
         else:
 
@@ -291,7 +291,7 @@ class TRUST:
         except TypeError:
             self.logg.error('COO FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
             # Create Train with suboptimal information
-            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+            associatedTrain = self.createUnactivatedTrain(activation='coo', movement=db_confirm.inserted_id, message=message)
 
         else:
             
@@ -332,7 +332,7 @@ class TRUST:
         except TypeError:
             self.logg.error('COI FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
             # Create Train with suboptimal information
-            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+            associatedTrain = self.createUnactivatedTrain(activation='coi', movement=db_confirm.inserted_id, message=message)
 
         else:
 
@@ -373,7 +373,7 @@ class TRUST:
         except TypeError:
             self.logg.error('COL FAIL TRUST {} | Creating Entry... '.format(message['body']['train_id']))
             # Create Train with suboptimal information
-            associatedTrain = self.createUnactivatedTrain(movement=db_confirm.inserted_id, message=message)
+            associatedTrain = self.createUnactivatedTrain(activation='col', movement=db_confirm.inserted_id, message=message)
 
         else:
 
@@ -392,7 +392,7 @@ class TRUST:
             db_confirm = self.db['trains'].update_one(updateQuery, newState)
 
 
-    def createUnactivatedTrain(self, movement, message):
+    def createUnactivatedTrain(self, activation, movement, message):
 
         # Setup DB Insertion
             activated_train = {
@@ -400,7 +400,7 @@ class TRUST:
                 "trust_id" : message['body']['train_id'],
                 "train_service_code" : message['body']['train_service_code'],
                 "state" : "UNKNOWN",
-                "activation" : "UNKNOWN",
+                "activation" : activation,
                 "movements" : [movement]
             }
 
