@@ -114,7 +114,7 @@ class TRUST:
         try:
             associated_schedule = query_res['_id']
             self.logg.debug('ACT PASS TRUST {} | SCHED {}'.format(message['body']['train_id'], associated_schedule))
-        except TypeError as e:
+        except TypeError:
             associated_schedule = 'UNKNOWN'
             self.logg.error('ACT FAIL TRUST {} | SCHED UNKNWN '.format(message['body']['train_id']))
 

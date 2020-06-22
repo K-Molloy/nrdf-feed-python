@@ -1,0 +1,46 @@
+{
+    "process-id": "kieran-m",
+    "security-token": "#SECURITY-KEY",
+    "mongo-type" : "test",
+    "stomp-connection":{
+        "host-url": "datafeeds.networkrail.co.uk",
+        "host-port": 61618,
+        "username": "#USERNAME",
+        "password": "#PASSWORD"
+    },
+    "mongo-live": {
+        "username": "",
+        "password":"",
+        "port":"",
+        "db-name":"",
+        "connection-string":""
+    },
+    "mongo-test": {
+        "username": "",
+        "password":"",
+        "port":"",
+        "db-name":"",
+        "connection-string":""
+    },
+    "installation":{
+        "full" : true,
+        "update": false,
+        "location": "#INSTALLTION-LOCATION",
+        "geography" : "Geography_20200517_to_20201212_from_20191216.txt.gz",
+        "bulk-operations-size" : 1000,
+        "schedule-file-size" : 25000,
+        "standard-bulk-size": 10000
+    },
+    "processing": {        
+        "trust": false,      
+        "td": false,
+        "vstp": false,
+        "rtppm": false,
+        "tsr": false
+    },
+    "subscriptions":{
+        "td-channel": "TD_ALL_SIG_AREA", 
+        "mvt-channel": "TRAIN_MVT_ALL_TOC",
+        "tsr-channel":"TSR_ALL_ROUTE"
+    }
+}

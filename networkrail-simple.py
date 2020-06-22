@@ -26,19 +26,25 @@ def nrdf_feed():
         _config = json.load(f)   
     logrep.info('Successfully loaded config file : %s' % _config_location)
 
+    # Load Selected Mongo Environment
+    if _config['mongo-type'] == "test":
+        mongoConfig = _config['mongo-test']
+    else:
+        mongoConfig = _config['mongo-live']
+
     # Network Rail Rules state security token must be present
     logrep.info('Process Name : {}'.format(_config['process-id']))
     logrep.info('Network Rail Security Token : {}'.format(_config['security-token']))
 
     # Create Mongo Connection
-    mongodb = MongoClient(_config['mongo']['connection-string'],
-                        username=_config['mongo']['username'],
-                        password=_config['mongo']['password'],
-                        authSource='connections',
+    mongodb = MongoClient(mongoConfig['connection-string'],
+                        username=mongoConfig['username'],
+                        password=mongoConfig['password'],
+                        authSource='admin',
                         authMechanism='SCRAM-SHA-256')
 
-    db = mongodb[_config['mongo']['db-name']]
-    logrep.info('MongoDB Connection Established [%s:%s]' % (_config['mongo']['connection-string'],_config['mongo']['db-name']))
+    db = mongodb[mongoConfig['db-name']]
+    logrep.info('MongoDB Connection Established [%s:%s]' % (mongoConfig['connection-string'],mongoConfig['db-name']))
             
     # Full Installation Process - Potentially needs some tweaking
     if (_config['installation']['full']==True):
@@ -49,8 +55,6 @@ def nrdf_feed():
         ins.importReference(_config['installation']['geography'])
         ins.downloadFullSchedule()
         ins.importFullSchedule()
-
-    # TODO : Update Schedule Installation Process
         
         
     # Create Stomp Logic
@@ -61,8 +65,6 @@ def nrdf_feed():
 
     # Create Listener Object
     mq.set_listener('', Listener(mq,logrep,db, _config))
-
-    # 
 
     wait = input('')
     mq.disconnect()
